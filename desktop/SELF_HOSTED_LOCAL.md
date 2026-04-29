@@ -118,8 +118,15 @@ Start it with:
 
 ```bash
 cd backend
-uvicorn main:app --reload --env-file .env
+unset GOOGLE_CLOUD_PROJECT
+unset GCLOUD_PROJECT
+set -a
+source .env
+set +a
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+`source .env` is important for local Firebase Admin auth. `uvicorn --env-file .env` is not enough for this repo because `firebase_admin.initialize_app()` reads `GOOGLE_APPLICATION_CREDENTIALS` from the process environment.
 
 ## Rust desktop backend env
 
@@ -207,7 +214,12 @@ OMI_GOOGLE_SERVICE_INFO_PLIST=/absolute/path/to/GoogleService-Info.plist
 
    ```bash
    cd backend
-   uvicorn main:app --reload --env-file .env
+   unset GOOGLE_CLOUD_PROJECT
+   unset GCLOUD_PROJECT
+   set -a
+   source .env
+   set +a
+   uvicorn main:app --reload --host 127.0.0.1 --port 8000
    ```
 
 2. In another terminal, start Redis:
@@ -236,3 +248,51 @@ OMI_GOOGLE_SERVICE_INFO_PLIST=/absolute/path/to/GoogleService-Info.plist
    agent-swift connect --bundle-id com.omi.desktop-dev
    agent-swift snapshot -i
    ```
+
+## Resume after a Mac restart
+
+Use this when local env files are already created and you only want to resume the self-hosted desktop app.
+
+1. Start Redis:
+
+   ```bash
+   cd /Users/mika/local/dev/github.com/tomoyuki-mikami/omi/desktop
+   docker compose -f docker-compose.self-hosted.yml up -d redis
+   docker compose -f docker-compose.self-hosted.yml ps
+   ```
+
+2. Start the Python backend in a tmux session:
+
+   ```bash
+   tmux new-session -d -s omi-python-backend 'cd /Users/mika/local/dev/github.com/tomoyuki-mikami/omi/backend && unset GOOGLE_CLOUD_PROJECT && unset GCLOUD_PROJECT && set -a && source .env && set +a && exec /Users/mika/.codex/workspaces/omi-self-hosted-preflight/backend/py312venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000'
+   ```
+
+   If you are not using that existing virtualenv, replace the `uvicorn` path with the Python environment you use for `backend/`.
+
+3. Launch the self-hosted desktop app:
+
+   ```bash
+   cd /Users/mika/local/dev/github.com/tomoyuki-mikami/omi/desktop
+   ./run-self-hosted.sh
+   ```
+
+   This launches `/Applications/Omi Dev.app` and starts the Rust desktop backend locally by default.
+
+4. Quick health checks:
+
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/docs
+   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:10201/
+   plutil -extract PROJECT_ID raw -o - /Applications/'Omi Dev.app'/Contents/Resources/GoogleService-Info.plist
+   ```
+
+   Expected results are `200`, `200`, and your Firebase project id.
+
+5. Optional: run the Rust backend detached instead of through `run-self-hosted.sh`:
+
+   ```bash
+   tmux new-session -d -s omi-desktop-backend 'cd /Users/mika/local/dev/github.com/tomoyuki-mikami/omi/desktop/Backend-Rust && set -a && source .env && set +a && exec ./target/release/omi-desktop-backend'
+   open /Applications/'Omi Dev.app'
+   ```
+
+Do not stop or restart the production Omi app while testing. The development app is `/Applications/Omi Dev.app` with bundle id `com.omi.desktop-dev`.
