@@ -14,6 +14,7 @@ DerivedData/
 .env.app
 .env.app.dev
 self-hosted.env
+self-hosted/
 
 # Credentials
 **/google-credentials.json

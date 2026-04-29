@@ -14,6 +14,7 @@ Options (via environment variables):
   PORT=10201                Rust backend port (default: 10201, never use 8080)
   OMI_APP_NAME="Omi Dev"   App name (default: "Omi Dev")
   OMI_PYTHON_API_URL="..."  Python backend URL (subscriptions, payments, etc; default: https://api.omi.me)
+  OMI_GOOGLE_SERVICE_INFO_PLIST="..."  Local Firebase plist to copy into the app bundle
   OMI_SIGN_IDENTITY="..."  Code signing identity (auto-detected if not set)
   OMI_ENABLE_LOCAL_AUTOMATION=1  Enable agent-swift automation bridge
 
@@ -434,7 +435,14 @@ cp -f Desktop/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 auth_debug "AFTER plist edits: auth_isSignedIn=$(defaults read "$BUNDLE_ID" auth_isSignedIn 2>&1 || true)"
 
 substep "Copying GoogleService-Info.plist"
-if [ -f "Desktop/Sources/GoogleService-Info-Dev.plist" ]; then
+if [ -n "${OMI_GOOGLE_SERVICE_INFO_PLIST:-}" ]; then
+    if [ ! -f "$OMI_GOOGLE_SERVICE_INFO_PLIST" ]; then
+        echo "ERROR: OMI_GOOGLE_SERVICE_INFO_PLIST does not exist: $OMI_GOOGLE_SERVICE_INFO_PLIST"
+        exit 1
+    fi
+    cp -f "$OMI_GOOGLE_SERVICE_INFO_PLIST" "$APP_BUNDLE/Contents/Resources/GoogleService-Info.plist"
+    substep "Using local Firebase plist: $OMI_GOOGLE_SERVICE_INFO_PLIST"
+elif [ -f "Desktop/Sources/GoogleService-Info-Dev.plist" ]; then
     cp -f Desktop/Sources/GoogleService-Info-Dev.plist "$APP_BUNDLE/Contents/Resources/GoogleService-Info.plist"
 else
     cp -f Desktop/Sources/GoogleService-Info.plist "$APP_BUNDLE/Contents/Resources/"

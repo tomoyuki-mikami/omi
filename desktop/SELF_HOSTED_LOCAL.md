@@ -23,10 +23,13 @@ backend/.env
 backend/google-credentials.json
 desktop/Backend-Rust/.env
 desktop/Backend-Rust/google-credentials.json
+desktop/self-hosted/GoogleService-Info.plist
 desktop/self-hosted.env
 ```
 
 `backend/google-credentials.json` and `desktop/Backend-Rust/google-credentials.json` can both be symlinks to the same Firebase Admin SDK service account JSON when both backends use the same Firebase project.
+
+`desktop/self-hosted/GoogleService-Info.plist` is the Firebase client config copied into the macOS app bundle by `desktop/run-self-hosted.sh`. It must come from a Firebase project you control, and must not be committed.
 
 ## Local Redis
 
@@ -53,6 +56,7 @@ Required before either backend can talk to your own Firestore:
 - A Firebase project you control.
 - Firestore enabled in that project.
 - A service account JSON for that project.
+- A `GoogleService-Info.plist` for that project.
 - `FIREBASE_PROJECT_ID` set to that project id.
 - `FIREBASE_API_KEY` from that Firebase project.
 
@@ -188,6 +192,13 @@ Keep the local values unless you intentionally run one of the backends elsewhere
 ```env
 OMI_PYTHON_API_URL=http://localhost:8000
 OMI_DESKTOP_API_URL=http://localhost:10201
+OMI_GOOGLE_SERVICE_INFO_PLIST=self-hosted/GoogleService-Info.plist
+```
+
+If the plist lives outside the repository, set an absolute path instead:
+
+```env
+OMI_GOOGLE_SERVICE_INFO_PLIST=/absolute/path/to/GoogleService-Info.plist
 ```
 
 ## Verification order
